@@ -162,18 +162,23 @@ def fetch_and_analyze_data():
     df_stats = pd.DataFrame(stats_data)
     
     if not df_stats.empty:
-        # Sort ALL 50 assets by Score (Highest Momentum to Lowest)
+        # 1. Sort ALL 50 assets and assign their TRUE Global Rank first
         df_stats = df_stats.sort_values("Score", ascending=False).reset_index(drop=True)
-        
-        # DYNAMIC INCLUSION: Automatically slice the Top 20 for the Dashboard
-        df_stats = df_stats.head(20).copy()
         df_stats['Rank'] = df_stats.index + 1
         
-        # Filter history dictionary to only include the winning Top 20 assets
-        top_20_assets = df_stats['Asset'].tolist()
-        history_dict = {k: v for k, v in history_dict.items() if k in top_20_assets}
-    
-    return df_stats, history_dict
+        # 2. Slice the Top 20 Leaders
+        display_df = df_stats.head(20).copy()
+        
+        # 3. Pin India (Nifty 50) to the bottom if it falls out of the Top 20
+        india_row = df_stats[df_stats['Asset'] == "🇮🇳 Nifty 50"]
+        if not india_row.empty and "🇮🇳 Nifty 50" not in display_df['Asset'].values:
+            display_df = pd.concat([display_df, india_row])
+        
+        # 4. Filter history dictionary to only include the displayed assets
+        display_assets = display_df['Asset'].tolist()
+        history_dict = {k: v for k, v in history_dict.items() if k in display_assets}
+        
+        return display_df, history_dict
 
 @st.cache_data(ttl=3600)
 def calculate_correlation(history_dict):
